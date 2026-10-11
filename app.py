@@ -24,36 +24,30 @@ df['normalized_name'] = df['name'].apply(normalize_name)
 
 def recommend_songs(song_name, df, num_recommendations=5):
     """Recommend songs based on input song name with fuzzy matching"""
-    # Normalize the input song name
     normalized_input = normalize_name(song_name)
     
-    # Try exact match first on normalized names
     matching_songs = df[df["normalized_name"] == normalized_input]
     
-    # If no exact match, try partial match
     if matching_songs.empty:
         matching_songs = df[df["normalized_name"].str.contains(normalized_input)]
     
-    # If still no match, return empty
     if matching_songs.empty:
         return pd.DataFrame()
     
-    # Use the first match
     match_song = matching_songs.iloc[0]
     song_cluster = match_song["Cluster"]
     
-    # Get songs from the same cluster
-    same_cluster_songs = df[df["Cluster"] == song_cluster]
+    # FIX: Yahan filter karne ke baad index reset karna zaroori hai
+    same_cluster_songs = df[df["Cluster"] == song_cluster].reset_index(drop=True)
+    
+    # Ab ye sahi row dhoondega
     song_index = same_cluster_songs[same_cluster_songs["name"] == match_song["name"]].index[0]
     
-    # Calculate similarity
     cluster_features = same_cluster_songs[numerical_features]
     similarity = cosine_similarity(cluster_features, cluster_features)
     
-    # Get similar songs indices
     similar_songs = np.argsort(similarity[song_index])[-(num_recommendations + 1):-1][::-1]
     
-    # Get recommendations
     recommendations = same_cluster_songs.iloc[similar_songs][["name", "year", "artists"]]
     return recommendations
 
